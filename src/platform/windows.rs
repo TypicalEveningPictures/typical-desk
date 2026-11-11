@@ -1389,6 +1389,12 @@ pub fn get_install_options() -> String {
 }
 
 pub fn get_silent_install_options(printer_override: Option<bool>) -> &'static str {
+    // Typical Desk: installed by the Typical Compute controller as a
+    // background service. No desktop icon, Start Menu entry or printer.
+    const TYPICAL_DESK_HEADLESS: bool = true;
+    if TYPICAL_DESK_HEADLESS {
+        return "";
+    }
     if !is_win_10_or_greater() {
         return "desktopicon startmenu";
     }

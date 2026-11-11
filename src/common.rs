@@ -2506,7 +2506,41 @@ pub fn rustdesk_interval(i: Interval) -> ThrottledInterval {
     ThrottledInterval::new(i)
 }
 
+/// Typical Desk: this build is the remote-desktop engine inside Typical
+/// Compute. It talks only to the Typical Desk server (WebSocket through
+/// Cloudflare), shows no tray icon of its own, and is driven by the Typical
+/// Compute controller and app rather than by its own settings UI.
+fn typical_desk_defaults() {
+    *config::APP_NAME.write().unwrap() = "TypicalDesk".to_owned();
+    let mut settings = config::OVERWRITE_SETTINGS.write().unwrap();
+    for (k, v) in [
+        ("custom-rendezvous-server", "desk-id.typglow.com"),
+        ("relay-server", "desk-relay.typglow.com"),
+        ("key", "mMo4nmx0R5WkGe9NldfjEqkdltIkwZjAnddovyKmNQA="),
+        ("allow-websocket", "Y"),
+        // No API server exists; an https value is what selects wss://.
+        ("api-server", "https://desk-id.typglow.com"),
+        ("enable-check-update", "N"),
+        ("allow-auto-update", "N"),
+    ] {
+        settings.insert(k.to_owned(), v.to_owned());
+    }
+    let mut builtin = config::BUILTIN_SETTINGS.write().unwrap();
+    for k in [
+        "hide-tray",
+        "hide-powered-by-me",
+        "hide-help-cards",
+        "hide-server-settings",
+        "hide-websocket-settings",
+        "hide-proxy-settings",
+        "remove-preset-password-warning",
+    ] {
+        builtin.insert(k.to_owned(), "Y".to_owned());
+    }
+}
+
 pub fn load_custom_client() {
+    typical_desk_defaults();
     #[cfg(debug_assertions)]
     if let Ok(data) = std::fs::read_to_string("./custom.txt") {
         read_custom_client(data.trim());
