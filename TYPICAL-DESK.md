@@ -7,6 +7,6 @@ This fork of [RustDesk](https://github.com/rustdesk/rustdesk) is the remote-desk
 - **`src/tray.rs`**: the hidden tray stays hidden on macOS too.
 - **`src/platform/windows.rs`, `get_silent_install_options()`**: a silent install adds no desktop icon, Start Menu entry or printer.
 - **Icons**: every RustDesk icon (`res/*.png`, `res/icon.ico`, the Windows runner's `app_icon.ico`, the Mac `AppIcon.icns`) is the Typical Desk icon, Typical Projects' design reading "Typical Desk". Its source is `res/typical-desk-icon/AppIcon.icon` (Icon Composer), rendered with Icon Composer's `ictool`.
-- **`.github/workflows/typical-desk.yml`**: builds only Windows x64 and macOS arm64, unsigned, as workflow artifacts. The Mac app is then signed with the Developer ID before it is published, so its macOS permissions survive engine updates.
+- **`.github/workflows/typical-desk.yml`**: builds only Windows x64 and macOS arm64, unsigned, as workflow artifacts. The Windows build runs on a self-hosted runner on TypicalPC (`C:\actions-runner`, label `typical-win`, service `actions.runner.TypicalEveningPictures-typical-desk.typicalpc`); GitHub's runner took about 45 minutes. macOS builds on GitHub's runner until a Mac with Xcode and room to spare is set up. The Mac app is then signed with the Developer ID before it is published, so its macOS permissions survive engine updates.
 
 RustDesk is licensed under AGPL-3.0, and so is this fork. The server-side patch is in `TypicalEveningPictures/tep-hub` under `infra/typical-desk/`.

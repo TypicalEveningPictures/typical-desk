@@ -59,7 +59,7 @@ jobs:
       matrix:
         job:
         - target: x86_64-pc-windows-msvc
-          os: windows-2022
+          os: typical-win  # self-hosted on TypicalPC (C:\actions-runner); GitHub's 4-core runner took 45 minutes
           arch: x86_64
           flutter-arch: x64
           vcpkg-triplet: x64-windows-static
