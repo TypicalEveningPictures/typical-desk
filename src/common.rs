@@ -2520,10 +2520,14 @@ fn typical_desk_defaults() {
         ("allow-websocket", "Y"),
         // No API server exists; an https value is what selects wss://.
         ("api-server", "https://desk-id.typglow.com"),
-        // Listen for direct connections on the local network (TCP 21118),
-        // so two machines on the same network or tailnet connect straight
-        // to each other instead of through the relay. Same password check.
+        // Listen for direct connections on the local network, so two
+        // machines on the same network or tailnet connect straight to each
+        // other instead of through the relay. Same password check. Port
+        // 21128, not upstream's 21118: that one belongs to the ID server's
+        // websocket, and a machine that also hosts the server (coloradopc)
+        // could never listen there.
         ("direct-server", "Y"),
+        ("direct-access-port", "21128"),
         ("enable-check-update", "N"),
         ("allow-auto-update", "N"),
     ] {

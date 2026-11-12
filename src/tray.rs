@@ -10,11 +10,10 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 pub fn start_tray() {
+    // Typical Desk is driven by Typical Compute and has no menu of its own,
+    // on macOS too (upstream keeps the Mac menu-bar icon regardless).
     if crate::ui_interface::get_builtin_option(keys::OPTION_HIDE_TRAY) == "Y" {
-        #[cfg(not(target_os = "macos"))]
-        {
-            return;
-        }
+        return;
     }
 
     #[cfg(target_os = "linux")]

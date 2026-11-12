@@ -402,6 +402,11 @@ pub fn core_main() -> Option<CoreMainAction> {
             }
             #[cfg(target_os = "macos")]
             {
+                // Typical Desk hosts a Mac as the signed-in user. Ask for the
+                // two permissions being controlled needs, once, up front, so
+                // they're granted before the first session rather than during it.
+                crate::platform::macos::is_can_screen_recording(true);
+                crate::platform::macos::is_process_trusted(true);
                 let handler = std::thread::spawn(move || crate::start_server(true, false));
                 crate::tray::start_tray();
                 // prevent server exit when encountering errors from tray
@@ -432,7 +437,7 @@ pub fn core_main() -> Option<CoreMainAction> {
                 return None;
             }
             if args.len() == 2 {
-                if crate::platform::is_installed() && is_root() {
+                if typical_desk_cli_allowed() {
                     if let Err(err) = crate::ipc::set_permanent_password(args[1].to_owned()) {
                         println!("{err}");
                     } else {
@@ -516,7 +521,7 @@ pub fn core_main() -> Option<CoreMainAction> {
                 println!("Settings are disabled!");
                 return None;
             }
-            if crate::platform::is_installed() && is_root() {
+            if typical_desk_cli_allowed() {
                 if args.len() == 2 {
                     let options = crate::ipc::get_options();
                     println!("{}", options.get(&args[1]).unwrap_or(&"".to_owned()));
@@ -862,6 +867,21 @@ fn is_root() -> bool {
     }
     #[allow(unreachable_code)]
     crate::platform::is_root()
+}
+
+/// May this command-line call change settings (session password, options)?
+///
+/// Upstream requires an installed copy run as root. Typical Desk on macOS has
+/// no root service: it runs as the signed-in user, and so does the Typical
+/// Compute controller that sets each session's password. Anything running as
+/// that user can already write the user's own config, so allowing it here is
+/// no new access.
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
+fn typical_desk_cli_allowed() -> bool {
+    if crate::platform::is_installed() && is_root() {
+        return true;
+    }
+    cfg!(target_os = "macos")
 }
 
 #[cfg(any(target_os = "linux", target_os = "macos"))]
