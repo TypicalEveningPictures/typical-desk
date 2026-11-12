@@ -10,3 +10,14 @@ This fork of [RustDesk](https://github.com/rustdesk/rustdesk) is the remote-desk
 - **`.github/workflows/typical-desk.yml`**: builds only Windows x64 and macOS arm64, unsigned, as workflow artifacts. The Windows build runs on a self-hosted runner on TypicalPC (`C:\actions-runner`, label `typical-win`, service `actions.runner.TypicalEveningPictures-typical-desk.typicalpc`); GitHub's runner took about 45 minutes. macOS builds on GitHub's runner until a Mac with Xcode and room to spare is set up. The Mac app is then signed with the Developer ID before it is published, so its macOS permissions survive engine updates. Its bundle identifier is `com.typglow.typicaldesk` and its bundle name "Typical Desk" (the Xcode project sets the identifier; publishing sets `CFBundleName`/`CFBundleDisplayName` before signing). It must not be `com.carriez.rustdesk`: on a Mac that ever had stock RustDesk, macOS keeps that identifier's Screen Recording and Accessibility grants tied to RustDesk's signing team, so our build was refused without a prompt ("Failed to create capturer") while System Settings showed RustDesk as allowed.
 
 RustDesk is licensed under AGPL-3.0, and so is this fork. The server-side patch is in `TypicalEveningPictures/tep-hub` under `infra/typical-desk/`.
+
+## Video tuning (td-1.5.1-5)
+
+Checked against Microsoft's, NVIDIA's and Apple's low-latency guidance.
+
+- **`libs/scrap/Cargo.toml`**: `hwcodec` comes from our fork `TypicalEveningPictures/hwcodec`, branch `typical-desk`. It sets NVENC `tune=ull`, `zerolatency=1` and a one-frame VBV (`rc_buffer_size = bitrate / fps`), per NVIDIA's "recommended settings" for low-latency use. Upstream leaves ffmpeg's `hq` tuning and a two-second VBV.
+- **`res/vcpkg/ffmpeg/patch/0016-videotoolbox-low-latency-hevc-arm64.patch`**: `AV_CODEC_FLAG_LOW_DELAY` (which `hwcodec` already sets) now turns on `kVTVideoEncoderSpecification_EnableLowLatencyRateControl` for HEVC on Apple silicon, as FFmpeg 8 does; FFmpeg 7.1 did it for H.264 only, and our Macs encode HEVC. If the encoder refuses, the session is created again without it.
+- **`src/client.rs`, `typical_desk_direct_quality()`**: a viewer connected straight to an IPv4 address and still on the stock "balanced" quality asks for custom quality and 60 fps: four times the stock bitrate on a private address, twice on any other (a tailnet). Sessions by Desk ID are unchanged. The host's delay-based adaptation still applies.
+- **`libs/scrap/src/common/codec.rs`, `allow_d3d_render()`**: on unless set to `N`, so a Windows viewer decodes to a D3D11 texture and draws it without a round trip through memory.
+
+Still to do: capture on macOS with ScreenCaptureKit in NV12 (it uses `CGDisplayStream`, obsolete since macOS 15, in BGRA with two copies per frame), and a GPU path for the macOS viewer.

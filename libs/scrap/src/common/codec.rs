@@ -887,7 +887,11 @@ pub fn enable_directx_capture() -> bool {
 #[cfg(windows)]
 pub fn allow_d3d_render() -> bool {
     use base::config::keys::OPTION_ALLOW_D3D_RENDER as OPTION;
-    option2bool(OPTION, &hbb_common::config::LocalConfig::get_option(OPTION))
+    // Typical Desk: on unless switched off. Upstream needs an explicit "Y",
+    // so a Windows viewer decoded on the GPU, copied the frame to memory and
+    // uploaded it again. Our PCs all have a discrete GPU; "N" still turns the
+    // direct path off.
+    hbb_common::config::LocalConfig::get_option(OPTION) != "N"
 }
 
 pub const BR_BEST: f32 = 1.5;

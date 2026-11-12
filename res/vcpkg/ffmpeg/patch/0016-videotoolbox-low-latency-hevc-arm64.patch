@@ -1,0 +1,54 @@
+From: Typical Desk
+Subject: [PATCH] videotoolbox: low-latency rate control for HEVC on arm64
+
+FFmpeg 7.1 turns on kVTVideoEncoderSpecification_EnableLowLatencyRateControl
+only for H.264. Apple silicon also takes it for HEVC (FFmpeg 8 does the same).
+If the encoder refuses it, the session is created again without it.
+---
+--- a/libavcodec/videotoolboxenc.c	2026-11-12 13:57:39
++++ b/libavcodec/videotoolboxenc.c	2026-11-12 13:58:06
+@@ -1184,6 +1184,25 @@
+ 
+     vtctx->last_bit_rate = bit_rate;
+     int status = VTCompressionSessionCreate(kCFAllocatorDefault,
++                                            avctx->width,
++                                            avctx->height,
++                                            codec_type,
++                                            enc_info,
++                                            pixel_buffer_info,
++                                            kCFAllocatorDefault,
++                                            vtenc_output_callback,
++                                            avctx,
++                                            session);
++
++    if ((status || !vtctx->session) && enc_info &&
++        compat_keys.kVTVideoEncoderSpecification_EnableLowLatencyRateControl &&
++        CFDictionaryContainsKey(enc_info,
++                                compat_keys.kVTVideoEncoderSpecification_EnableLowLatencyRateControl)) {
++        // The encoder refused low-latency rate control: go on without it.
++        av_log(avctx, AV_LOG_WARNING, "Low-latency rate control refused (%d), retrying without it\n", status);
++        CFDictionaryRemoveValue((CFMutableDictionaryRef)enc_info,
++                                compat_keys.kVTVideoEncoderSpecification_EnableLowLatencyRateControl);
++        status = VTCompressionSessionCreate(kCFAllocatorDefault,
+                                             avctx->width,
+                                             avctx->height,
+                                             codec_type,
+@@ -1193,6 +1212,7 @@
+                                             vtenc_output_callback,
+                                             avctx,
+                                             session);
++    }
+ 
+     if (status || !vtctx->session) {
+         av_log(avctx, AV_LOG_ERROR, "Error: cannot create compression session: %d\n", status);
+@@ -1688,7 +1708,9 @@
+ #endif
+ 
+     // low-latency mode: eliminate frame reordering, follow a one-in-one-out encoding mode
+-    if ((avctx->flags & AV_CODEC_FLAG_LOW_DELAY) && avctx->codec_id == AV_CODEC_ID_H264) {
++    if ((avctx->flags & AV_CODEC_FLAG_LOW_DELAY) &&
++        (avctx->codec_id == AV_CODEC_ID_H264 ||
++         (TARGET_CPU_ARM64 && avctx->codec_id == AV_CODEC_ID_HEVC))) {
+         CFDictionarySetValue(enc_info,
+                              compat_keys.kVTVideoEncoderSpecification_EnableLowLatencyRateControl,
+                              kCFBooleanTrue);

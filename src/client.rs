@@ -2828,6 +2828,27 @@ struct ConnToken {
     session_id: u64,
 }
 
+/// Typical Desk: the custom quality (percent, where 50 is the stock bitrate)
+/// and frame rate for a peer reached directly by IPv4 address. A private
+/// (home or office) address gets four times the stock bitrate, any other
+/// address, such as a tailnet one, twice. `None` for a Desk ID, which goes
+/// through the rendezvous server and possibly the relay.
+pub fn typical_desk_direct_quality(id: &str) -> Option<(i32, i32)> {
+    if !hbb_common::is_ipv4_str(id) {
+        return None;
+    }
+    let host = id.split(':').next().unwrap_or_default();
+    let ip: std::net::Ipv4Addr = host.parse().ok()?;
+    if ip.is_loopback() {
+        return None;
+    }
+    if ip.is_private() {
+        Some((200, 60))
+    } else {
+        Some((100, 60))
+    }
+}
+
 /// Login config handler for [`Client`].
 #[derive(Default)]
 pub struct LoginConfigHandler {
@@ -3380,7 +3401,23 @@ impl LoginConfigHandler {
             }
         }
         let q = self.image_quality.clone();
-        if let Some(q) = self.get_image_quality_enum(&q, ignore_default) {
+        // Typical Desk: a session opened straight to an address (same network
+        // or tailnet, no relay) and still on the stock quality gets more
+        // bitrate and 60 fps. The host's own adaptation still lowers both if
+        // the link shows delay. Anything the user picked by hand is kept.
+        let td_direct = if q == "balanced" || q.is_empty() {
+            typical_desk_direct_quality(&self.id)
+        } else {
+            None
+        };
+        if let Some((quality, _fps)) = td_direct {
+            msg.custom_image_quality = quality << 8;
+            #[cfg(feature = "flutter")]
+            {
+                msg.custom_fps = _fps;
+                *self.custom_fps.lock().unwrap() = Some(_fps as _);
+            }
+        } else if let Some(q) = self.get_image_quality_enum(&q, ignore_default) {
             msg.image_quality = q.into();
         } else if q == "custom" {
             let config = self.load_config();
