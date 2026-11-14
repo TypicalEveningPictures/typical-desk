@@ -10,8 +10,12 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 pub fn start_tray() {
-    // Typical Desk is driven by Typical Compute and has no menu of its own,
-    // on macOS too (upstream keeps the Mac menu-bar icon regardless).
+    // Typical Desk is driven by Typical Compute and has no menu of its own.
+    // On macOS the event loop below must still run: the server injects mouse
+    // and keyboard input on the main dispatch queue, which only drains while
+    // the main thread runs a loop. `make_tray` skips creating the icon when
+    // the tray is hidden, so the Mac gets the loop without a menu-bar icon.
+    #[cfg(not(target_os = "macos"))]
     if crate::ui_interface::get_builtin_option(keys::OPTION_HIDE_TRAY) == "Y" {
         return;
     }
